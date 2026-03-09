@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindZen – Brain Training Game</title>
+<meta property="og:title" content="MindZen – Brain Training Game">
+<meta property="og:description" content="Train your brain with 4 fun games! Memory, Math, Word & Color challenges. Play free at Fikrago.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a; --surface:#111827; --card:#1a2236;
+    --accent:#7ee8c8; --accent2:#a78bfa; --accent3:#f472b6;
+    --gold:#fbbf24; --text:#e2e8f0; --muted:#64748b;
+    --glow:0 0 30px rgba(126,232,200,0.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(126,232,200,0.07) 0%,transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%,rgba(167,139,250,0.07) 0%,transparent 60%),
+      radial-gradient(ellipse 50% 50% at 50% 50%,rgba(244,114,182,0.04) 0%,transparent 70%);
+    pointer-events:none;z-index:0;}
+  .orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.15;pointer-events:none;animation:float 8s ease-in-out infinite;z-index:0;}
+  .orb1{width:400px;height:400px;background:var(--accent);top:-100px;left:-100px;}
+  .orb2{width:300px;height:300px;background:var(--accent2);bottom:-100px;right:-50px;animation-delay:-3s;}
+  .orb3{width:200px;height:200px;background:var(--accent3);top:50%;left:60%;animation-delay:-6s;}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-40px) scale(1.05)}}
+
+  .wrapper{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:20px;}
+  header{text-align:center;padding:30px 0 20px;}
+  .logo{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,6vw,3.2rem);font-weight:900;
+    background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;line-height:1;}
+  .tagline{color:var(--muted);font-size:0.9rem;margin-top:6px;letter-spacing:2px;text-transform:uppercase;}
+
+  .tabs{display:flex;gap:8px;justify-content:center;margin:24px 0 20px;flex-wrap:wrap;}
+  .tab{padding:8px 22px;border-radius:50px;border:1.5px solid rgba(255,255,255,0.1);background:transparent;
+    color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;transition:all 0.3s;letter-spacing:0.5px;}
+  .tab:hover{border-color:var(--accent);color:var(--accent);}
+  .tab.active{background:linear-gradient(135deg,rgba(126,232,200,0.15),rgba(167,139,250,0.15));
+    border-color:var(--accent);color:var(--accent);box-shadow:var(--glow);}
+
+  .score-bar{display:flex;justify-content:space-between;align-items:center;background:var(--card);
+    border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px 24px;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+  .stat{text-align:center;}
+  .stat-val{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--accent);line-height:1;}
+  .stat-val.gold{color:var(--gold);} .stat-val.purple{color:var(--accent2);}
+  .stat-label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+  .timer-wrap{width:100%;height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-bottom:16px;}
+  .timer-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 0.1s linear;box-shadow:var(--glow);}
+
+  .game-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:24px;
+    padding:32px 28px;min-height:340px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;position:relative;overflow:hidden;}
+  .game-card::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(126,232,200,0.05) 0%,transparent 70%);pointer-events:none;}
+
+  /* MEMORY */
+  .sequence-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%;max-width:320px;}
+  .seq-btn{aspect-ratio:1;border-radius:14px;border:2px solid rgba(255,255,255,0.08);cursor:pointer;
+    transition:all 0.15s;background:var(--surface);position:relative;overflow:hidden;}
+  .seq-btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.15s;border-radius:inherit;}
+  .seq-btn:nth-child(4n+1){--c:var(--accent)} .seq-btn:nth-child(4n+2){--c:var(--accent2)}
+  .seq-btn:nth-child(4n+3){--c:var(--accent3)} .seq-btn:nth-child(4n+4){--c:var(--gold)}
+  .seq-btn::after{background:var(--c);}
+  .seq-btn.lit::after{opacity:1;}
+  .seq-btn:hover:not(:disabled)::after{opacity:0.3;}
+  .seq-btn:disabled{cursor:default;}
+
+  /* MATH */
+  .math-question{font-family:'Playfair Display',serif;font-size:clamp(2.5rem,8vw,4rem);font-weight:700;
+    text-align:center;margin-bottom:28px;
+    background:linear-gradient(135deg,#fff,var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .math-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:320px;}
+  .opt-btn{padding:18px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);background:var(--surface);
+    color:var(--text);font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
+  .opt-btn:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--glow);}
+  .opt-btn.correct{background:rgba(126,232,200,0.2);border-color:var(--accent);}
+  .opt-btn.wrong{background:rgba(244,114,182,0.2);border-color:var(--accent3);}
+
+  /* WORD */
+  .scrambled-word{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,8vw,3.5rem);font-weight:900;
+    letter-spacing:12px;text-align:center;color:var(--accent2);margin-bottom:12px;text-transform:uppercase;}
+  .word-hint{color:var(--muted);font-size:0.85rem;margin-bottom:24px;text-align:center;}
+  .word-input{background:var(--surface);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;
+    padding:14px 20px;color:var(--text);font-family:'Playfair Display',serif;font-size:1.4rem;
+    text-align:center;text-transform:uppercase;letter-spacing:6px;width:100%;max-width:280px;
+    outline:none;transition:border-color 0.2s;}
+  .word-input:focus{border-color:var(--accent2);box-shadow:0 0 20px rgba(167,139,250,0.2);}
+  .word-input.correct-input{border-color:var(--accent);box-shadow:0 0 20px rgba(126,232,200,0.3);}
+  .word-input.wrong-input{border-color:var(--accent3);}
+
+  /* COLOR */
+  .color-word{font-family:'Playfair Display',serif;font-size:clamp(3rem,10vw,5rem);font-weight:900;
+    text-align:center;margin-bottom:8px;text-shadow:0 0 40px currentColor;}
+  .color-instruction{color:var(--muted);font-size:0.85rem;text-align:center;margin-bottom:24px;letter-spacing:1px;}
+  .color-options{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+  .color-opt{padding:12px 28px;border-radius:50px;border:none;font-family:'DM Sans',sans-serif;
+    font-size:0.9rem;font-weight:500;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;}
+  .color-opt:hover{transform:scale(1.07);filter:brightness(1.2);}
+
+  .instructions{text-align:center;color:var(--muted);font-size:0.85rem;margin-top:14px;letter-spacing:0.5px;}
+
+  /* Feedback flash */
+  .feedback{position:fixed;top:50%;left:50%;font-family:'Playfair Display',serif;
+    font-size:5rem;font-weight:900;pointer-events:none;z-index:100;opacity:0;}
+  @keyframes feedbackAnim{0%{opacity:1;transform:translate(-50%,-55%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-70%) scale(0.8)}}
+  .feedback.show{animation:feedbackAnim 0.6s forwards;}
+
+  /* Overlay */
+  .overlay{position:absolute;inset:0;background:rgba(10,14,26,0.93);border-radius:24px;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;z-index:10;backdrop-filter:blur(4px);}
+  .overlay.visible{display:flex;}
+  .overlay-icon{font-size:3.5rem;margin-bottom:12px;}
+  .overlay-title{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,5vw,2rem);font-weight:700;margin-bottom:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .overlay-sub{color:var(--muted);font-size:0.9rem;margin-bottom:24px;max-width:320px;line-height:1.6;}
+
+  .btn-primary{padding:14px 40px;border-radius:50px;border:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0e1a;
+    font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.25s;
+    letter-spacing:0.5px;box-shadow:0 4px 20px rgba(126,232,200,0.3);}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(126,232,200,0.5);}
+  .btn-secondary{padding:12px 28px;border-radius:50px;border:1.5px solid rgba(255,255,255,0.15);
+    background:transparent;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;
+    font-weight:500;cursor:pointer;transition:all 0.25s;}
+  .btn-secondary:hover{border-color:var(--accent2);color:var(--accent2);}
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+  .gameover-score{font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:900;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    line-height:1;margin:8px 0 4px;}
+  .gameover-stats{display:flex;gap:20px;justify-content:center;margin:12px 0 20px;flex-wrap:wrap;}
+  .gameover-stat{text-align:center;}
+  .gameover-stat-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;}
+  .gameover-stat-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+  /* Footer */
+  .footer{text-align:center;padding:28px 0 16px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .footer-links{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+  .footer-link{display:flex;align-items:center;gap:7px;padding:10px 22px;border-radius:50px;
+    border:1.5px solid rgba(255,255,255,0.1);color:var(--text);text-decoration:none;
+    font-size:0.85rem;font-weight:500;transition:all 0.25s;background:var(--card);}
+  .footer-link:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);box-shadow:var(--glow);}
+  .footer-link.donate{border-color:rgba(251,191,36,0.3);color:var(--gold);}
+  .footer-link.donate:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(251,191,36,0.3);}
+  .footer-copy{color:var(--muted);font-size:0.75rem;}
+
+  @keyframes scorePulse{0%{transform:scale(1)}30%{transform:scale(1.3)}100%{transform:scale(1)}}
+  .score-pulse{animation:scorePulse 0.35s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .shake{animation:shake 0.3s ease;}
+
+  .level-pill{display:inline-block;padding:3px 12px;border-radius:50px;
+    background:linear-gradient(135deg,rgba(126,232,200,0.15),rgba(167,139,250,0.15));
+    border:1px solid rgba(126,232,200,0.2);font-size:0.75rem;color:var(--accent);
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+
+  /* ===== SHARE MODAL ===== */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .modal-backdrop.open{opacity:1;pointer-events:all;}
+  .share-modal{width:100%;max-width:440px;background:var(--card);
+    border:1px solid rgba(255,255,255,0.1);border-radius:28px;overflow:hidden;
+    transform:scale(0.9);transition:transform 0.3s;box-shadow:0 30px 80px rgba(0,0,0,0.6);}
+  .modal-backdrop.open .share-modal{transform:scale(1);}
+
+  #shareCard{background:linear-gradient(145deg,#0d1524,#1a2236,#0d1524);
+    padding:36px 32px 28px;position:relative;overflow:hidden;text-align:center;}
+  #shareCard::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse 80% 60% at 30% 20%,rgba(126,232,200,0.12) 0%,transparent 60%),
+      radial-gradient(ellipse 60% 70% at 70% 80%,rgba(167,139,250,0.1) 0%,transparent 60%);
+    pointer-events:none;}
+  .share-logo{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;
+    background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;}
+  .share-tagline{color:var(--muted);font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;}
+  .share-game-badge{display:inline-block;padding:5px 16px;border-radius:50px;
+    background:linear-gradient(135deg,rgba(126,232,200,0.15),rgba(167,139,250,0.15));
+    border:1px solid rgba(126,232,200,0.25);font-size:0.75rem;color:var(--accent);
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;}
+  .share-score-big{font-family:'Playfair Display',serif;font-size:5rem;font-weight:900;line-height:1;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+  .share-score-label{color:var(--muted);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px;}
+  .share-stats-row{display:flex;justify-content:center;gap:24px;margin-bottom:24px;flex-wrap:wrap;}
+  .share-stat{text-align:center;}
+  .share-stat-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;}
+  .share-stat-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .share-divider{height:1px;background:rgba(255,255,255,0.07);margin:0 -32px 20px;}
+  .share-url{color:var(--accent);font-size:0.8rem;font-weight:500;letter-spacing:0.5px;}
+  .modal-actions{padding:20px 24px 24px;display:flex;flex-direction:column;gap:10px;}
+  .btn-copy{padding:14px;border-radius:14px;border:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0e1a;
+    font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.25s;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn-copy:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(126,232,200,0.3);}
+  .btn-close-modal{padding:12px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);
+    background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.9rem;cursor:pointer;transition:all 0.2s;}
+  .btn-close-modal:hover{border-color:rgba(255,255,255,0.3);color:var(--text);}
+
+  .copied-toast{position:fixed;bottom:30px;left:50%;
+    transform:translateX(-50%) translateY(20px);background:var(--accent);color:#0a0e1a;
+    padding:12px 28px;border-radius:50px;font-weight:700;font-size:0.9rem;
+    z-index:300;opacity:0;transition:all 0.3s;pointer-events:none;}
+  .copied-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:500px){
+    .score-bar{flex-direction:column;}
+    .stat{display:flex;align-items:center;gap:10px;}
+    .stat-val{font-size:1.3rem;}
+    #shareCard{padding:24px 18px 20px;}
+    .share-score-big{font-size:3.5rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<div class="feedback" id="feedback"></div>
+
+<!-- Share Modal -->
+<div class="modal-backdrop" id="shareModalBackdrop">
+  <div class="share-modal" id="shareModalBox">
+    <div id="shareCard">
+      <div class="share-logo">MindZen</div>
+      <div class="share-tagline">Brain Training · fikrago.com</div>
+      <div class="share-game-badge" id="shareGameBadge">Memory Sequence</div>
+      <div class="share-score-big" id="shareScoreBig">0</div>
+      <div class="share-score-label">FINAL SCORE</div>
+      <div class="share-stats-row">
+        <div class="share-stat">
+          <div class="share-stat-val" style="color:var(--gold)" id="shareBest">0</div>
+          <div class="share-stat-label">Best Ever</div>
+        </div>
+        <div class="share-stat">
+          <div class="share-stat-val" style="color:var(--accent2)" id="shareStreak">0 🔥</div>
+          <div class="share-stat-label">Best Streak</div>
+        </div>
+        <div class="share-stat">
+          <div class="share-stat-val" style="color:var(--accent3)" id="shareLevel">1</div>
+          <div class="share-stat-label">Level</div>
+        </div>
+      </div>
+      <div class="share-divider"></div>
+      <div class="share-url">🌐 fikrago.com &nbsp;·&nbsp; Can you beat me?</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-copy" onclick="copyScoreText()">📋 Copy Score to Share</button>
+      <button class="btn-close-modal" onclick="closeShareModal()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="copied-toast" id="copiedToast">✓ Copied! Share it anywhere 🚀</div>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">MindZen</div>
+    <div class="tagline">Train your brain · Find your calm</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-memory" onclick="switchGame('memory')">🧠 Memory</button>
+    <button class="tab" id="tab-math"   onclick="switchGame('math')">⚡ Math Blitz</button>
+    <button class="tab" id="tab-word"   onclick="switchGame('word')">✨ Unscramble</button>
+    <button class="tab" id="tab-color"  onclick="switchGame('color')">🎨 Color Mind</button>
+  </div>
+
+  <div class="score-bar">
+    <div class="stat"><div class="stat-val" id="scoreDisplay">0</div><div class="stat-label">Score</div></div>
+    <div class="stat"><div class="stat-val gold" id="bestDisplay">0</div><div class="stat-label">Best</div></div>
+    <div class="stat"><div class="stat-val purple" id="streakDisplay">0 🔥</div><div class="stat-label">Streak</div></div>
+    <div class="stat"><div class="stat-val" id="levelDisplay">1</div><div class="stat-label">Level</div></div>
+  </div>
+
+  <div class="timer-wrap"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+
+  <div class="game-card" id="gameCard">
+    <div class="overlay visible" id="startOverlay">
+      <div class="overlay-icon">🧘</div>
+      <div class="overlay-title">Ready to Train?</div>
+      <div class="overlay-sub">Challenge your mind with 4 unique games. Relax, focus, and see how far your brain can go.</div>
+      <button class="btn-primary" onclick="startGame()">Begin Journey</button>
+    </div>
+    <div id="gameArea"></div>
+  </div>
+
+  <div class="instructions" id="instructions">Choose a game above, then press Begin Journey</div>
+
+  <div class="footer">
+    <div class="footer-links">
+      <a href="https://www.fikrago.com/" target="_blank" class="footer-link">🌐 Visit Fikrago</a>
+      <a href="https://paypal.me/websiteMA" target="_blank" class="footer-link donate">☕ Support Creator</a>
+    </div>
+    <div class="footer-copy">Share MindZen with your friends • Made with ❤️ by
+      <a href="https://www.fikrago.com/" style="color:var(--accent);text-decoration:none;">Fikrago</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SAFE DOM HELPERS — fixes all null reference errors
+// ============================================================
+function $id(id){ return document.getElementById(id); }
+function setText(id, val){ const e=$id(id); if(e) e.textContent=val; }
+function setHTML(id, html){ const e=$id(id); if(e) e.innerHTML=html; }
+function setCss(id, prop, val){ const e=$id(id); if(e) e.style[prop]=val; }
+
+// ============================================================
+// STATE
+// ============================================================
+let currentGame = 'memory';
+let score=0, best=0, streak=0, bestStreak=0, level=1;
+let gameActive = false;
+
+const GAME_NAMES = { memory:'Memory Sequence', math:'Math Blitz', word:'Word Unscramble', color:'Color Mind' };
+const GAME_INFO  = {
+  memory:'Watch the pattern light up, then repeat it. Sequences get longer each round.',
+  math:  'Solve the math problem before time runs out! Speed + accuracy = more points.',
+  word:  'Unscramble the hidden word. Type your answer and press Enter.',
+  color: "Tap the COLOR of the ink — not what the word says. Don't be tricked!"
+};
+
+// ============================================================
+// CENTRALISED TIMER MANAGEMENT
+// ============================================================
+let _ivs=[], _tos=[];
+function _si(fn,ms){ const id=setInterval(fn,ms); _ivs.push(id); return id; }
+function _st(fn,ms){ const id=setTimeout(fn,ms);  _tos.push(id); return id; }
+function stopAll(){ _ivs.forEach(clearInterval); _ivs=[]; _tos.forEach(clearTimeout); _tos=[]; }
+
+function startCountdown(totalMs, onExpire){
+  let pct=100;
+  const step = 100/(totalMs/100);
+  setTimerBar(100);
+  return _si(()=>{
+    pct = Math.max(0, pct-step);
+    setTimerBar(pct);
+    if(pct<=0 && gameActive) onExpire();
+  },100);
+}
+let _cdId=null;
+function runCountdown(ms, onExpire){
+  if(_cdId) clearInterval(_cdId);
+  _cdId = startCountdown(ms, ()=>{ clearInterval(_cdId); onExpire(); });
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function setTimerBar(pct){
+  const f=$id('timerFill'); if(!f) return;
+  f.style.width=Math.max(0,pct)+'%';
+  f.style.background=pct>50?'hsl(170,80%,60%)':pct>25?'hsl(45,80%,60%)':'hsl(0,80%,60%)';
+}
+
+function showFeedback(emoji,color){
+  const f=$id('feedback'); if(!f) return;
+  f.textContent=emoji; f.style.color=color||'white';
+  f.style.transform='translate(-50%,-50%)';
+  f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+}
+
+function pulseEl(id){
+  const e=$id(id); if(!e) return;
+  e.classList.remove('score-pulse'); void e.offsetWidth; e.classList.add('score-pulse');
+}
+
+function updateStats(){
+  if(score>best) best=score;
+  if(streak>bestStreak) bestStreak=streak;
+  setText('scoreDisplay',score); pulseEl('scoreDisplay');
+  setText('bestDisplay',best);   pulseEl('bestDisplay');
+  setText('streakDisplay',streak+' 🔥');
+  setText('levelDisplay',level);
+}
+
+function onCorrect(pts){
+  score+=(pts||10); streak++;
+  if(streak>bestStreak) bestStreak=streak;
+  if(streak>0 && streak%5===0) level++;
+  updateStats();
+  showFeedback('✓','var(--accent)');
+}
+
+function onWrong(){
+  streak=0; updateStats();
+  showFeedback('✗','var(--accent3)');
+  const c=$id('gameCard'); if(c){c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');}
+}
+
+// ============================================================
+// TABS & OVERLAY
+// ============================================================
+function switchGame(game){
+  currentGame=game;
+  ['memory','math','word','color'].forEach(g=>{
+    const t=$id('tab-'+g); if(t) t.classList.toggle('active',g===game);
+  });
+  stopAll();
+  gameActive=false;
+  setTimerBar(100);
+  showStartOverlay(false);
+  setText('instructions', GAME_INFO[game]);
+}
+
+function showStartOverlay(welcome){
+  const icons={memory:'🧠',math:'⚡',word:'✨',color:'🎨'};
+  const o=$id('startOverlay');
+  if(!o) return;
+  if(welcome){
+    o.innerHTML=`
+      <div class="overlay-icon">🧘</div>
+      <div class="overlay-title">Ready to Train?</div>
+      <div class="overlay-sub">Challenge your mind with 4 unique games. Relax, focus, and see how far your brain can go.</div>
+      <button class="btn-primary" onclick="startGame()">Begin Journey</button>`;
+  } else {
+    o.innerHTML=`
+      <div class="overlay-icon">${icons[currentGame]}</div>
+      <div class="overlay-title">${GAME_NAMES[currentGame]}</div>
+      <div class="overlay-sub">${GAME_INFO[currentGame]}</div>
+      <button class="btn-primary" onclick="startGame()">Begin</button>`;
+  }
+  o.classList.add('visible');
+  setHTML('gameArea','');
+}
+
+function hideOverlay(){ const o=$id('startOverlay'); if(o) o.classList.remove('visible'); }
+
+function startGame(){
+  hideOverlay();
+  score=0; streak=0; bestStreak=0; level=1;
+  updateStats();
+  gameActive=true;
+  setTimerBar(100);
+  if(currentGame==='memory')     startMemory();
+  else if(currentGame==='math')  startMath();
+  else if(currentGame==='word')  startWord();
+  else if(currentGame==='color') startColor();
+}
+
+// ============================================================
+// GAME OVER
+// ============================================================
+function showGameOver(){
+  stopAll();
+  gameActive=false;
+  setTimerBar(0);
+  const o=$id('startOverlay'); if(!o) return;
+  o.innerHTML=`
+    <div class="overlay-icon">🏆</div>
+    <div class="overlay-title">Game Over!</div>
+    <div class="gameover-score">${score}</div>
+    <div style="color:var(--muted);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">YOUR SCORE</div>
+    <div class="gameover-stats">
+      <div class="gameover-stat">
+        <div class="gameover-stat-val" style="color:var(--gold)">${best}</div>
+        <div class="gameover-stat-label">Best Ever</div>
+      </div>
+      <div class="gameover-stat">
+        <div class="gameover-stat-val" style="color:var(--accent2)">${bestStreak} 🔥</div>
+        <div class="gameover-stat-label">Best Streak</div>
+      </div>
+      <div class="gameover-stat">
+        <div class="gameover-stat-val" style="color:var(--accent3)">${level}</div>
+        <div class="gameover-stat-label">Level</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="startGame()">Play Again</button>
+      <button class="btn-secondary" onclick="openShareModal()">📤 Share Score</button>
+    </div>`;
+  o.classList.add('visible');
+}
+
+// ============================================================
+// SHARE MODAL
+// ============================================================
+function openShareModal(){
+  setText('shareScoreBig', score);
+  setText('shareBest',     best);
+  setText('shareStreak',   bestStreak+' 🔥');
+  setText('shareLevel',    level);
+  setText('shareGameBadge', GAME_NAMES[currentGame]||currentGame);
+  const bd=$id('shareModalBackdrop'); if(bd) bd.classList.add('open');
+}
+
+function closeShareModal(){
+  const bd=$id('shareModalBackdrop'); if(bd) bd.classList.remove('open');
+}
+
+// Close on backdrop click
+document.addEventListener('click', e=>{
+  const bd=$id('shareModalBackdrop');
+  if(bd && e.target===bd) closeShareModal();
+});
+
+function copyScoreText(){
+  const text=
+    `🧠 MindZen Brain Game\n`+
+    `🎮 Game: ${GAME_NAMES[currentGame]}\n`+
+    `🏆 Score: ${score}\n`+
+    `⭐ Best Ever: ${best}\n`+
+    `🔥 Best Streak: ${bestStreak}\n`+
+    `📈 Level: ${level}\n\n`+
+    `Can you beat me? 👉 fikrago.com`;
+  const showToast=()=>{
+    const t=$id('copiedToast');
+    if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(showToast).catch(()=>{fallbackCopy(text);showToast();});
+  } else { fallbackCopy(text); showToast(); }
+}
+
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+}
+
+// ============================================================
+// GAME 1 — MEMORY SEQUENCE
+// ============================================================
+let memSeq=[], memUserSeq=[], memPlaying=false, memLives=3;
+const MEM_SIZE=8;
+
+function startMemory(){ memSeq=[]; memLives=3; renderMem(); _st(nextMemRound,500); }
+
+function renderMem(msg){
+  setHTML('gameArea',`
+    <div class="level-pill">Level ${level} · Round ${memSeq.length} · ❤️ ${memLives}</div>
+    <div class="sequence-grid" id="memGrid">
+      ${Array.from({length:MEM_SIZE},(_,i)=>`<button class="seq-btn" id="mb${i}" onclick="memClick(${i})" disabled></button>`).join('')}
+    </div>
+    <div id="memMsg" style="color:var(--muted);font-size:0.8rem;margin-top:16px;text-align:center;">${msg||'Get ready...'}</div>
+  `);
+}
+
+function nextMemRound(){
+  if(!gameActive) return;
+  memSeq.push(Math.floor(Math.random()*MEM_SIZE));
+  memUserSeq=[];
+  memPlaying=true;
+  renderMem('Watch the pattern...');
+  setBtns(true);
+  playSeq(0);
+}
+
+function playSeq(i){
+  if(!gameActive) return;
+  if(i>=memSeq.length){
+    _st(()=>{ setBtns(false); setText('memMsg','Your turn! Repeat the pattern.'); memPlaying=false; },400);
+    return;
+  }
+  const delay=Math.max(280,600-level*20);
+  _st(()=>{ flashBtn(memSeq[i]); _st(()=>playSeq(i+1),delay+100); },delay);
+}
+
+function flashBtn(idx){
+  const b=$id('mb'+idx); if(!b) return;
+  b.classList.add('lit'); _st(()=>{ const x=$id('mb'+idx); if(x) x.classList.remove('lit'); },350);
+}
+
+function setBtns(dis){
+  for(let i=0;i<MEM_SIZE;i++){ const b=$id('mb'+i); if(b) b.disabled=dis; }
+}
+
+function memClick(idx){
+  if(!gameActive||memPlaying) return;
+  flashBtn(idx);
+  memUserSeq.push(idx);
+  const pos=memUserSeq.length-1;
+  if(memUserSeq[pos]!==memSeq[pos]){
+    onWrong(); memLives--;
+    setBtns(true);
+    setText('memMsg', memLives>0 ? `Wrong! ❤️ ${memLives} left...` : 'No lives left!');
+    if(memLives<=0){ _st(showGameOver,1200); return; }
+    _st(nextMemRound,1400);
+    return;
+  }
+  if(memUserSeq.length===memSeq.length){
+    const pts=memSeq.length*5;
+    onCorrect(pts);
+    setBtns(true);
+    setText('memMsg',`Perfect! +${pts} pts 🎉`);
+    _st(nextMemRound,900);
+  }
+}
+
+// ============================================================
+// GAME 2 — MATH BLITZ
+// ============================================================
+const OPS=['+','-','×','÷'];
+let mathAns=0, mathTimerPct=100, mathLives=3;
+
+function startMath(){ mathLives=3; newMath(); }
+
+function newMath(){
+  if(!gameActive) return;
+  stopAll();
+  const diff=Math.min(level,5), max=5+diff*4;
+  let a=Math.floor(Math.random()*max)+1, b=Math.floor(Math.random()*max)+1;
+  const op=OPS[Math.floor(Math.random()*(diff>2?4:2))];
+  let ans;
+  if(op==='+') ans=a+b;
+  else if(op==='-') ans=a-b;
+  else if(op==='×'){a=rand(1,10);b=rand(1,10);ans=a*b;}
+  else {b=rand(1,9);ans=a;a=ans*b;}
+  mathAns=ans;
+
+  const opts=new Set([ans]);
+  let s=0;
+  while(opts.size<4&&s++<200){const w=ans+(rand(1,14)-7);if(w!==ans)opts.add(w);}
+  const shuf=[...opts].sort(()=>Math.random()-0.5);
+
+  setHTML('gameArea',`
+    <div class="level-pill">Level ${level} · ❤️ ${mathLives}</div>
+    <div class="math-question">${a} ${op} ${b} = ?</div>
+    <div class="math-options">
+      ${shuf.map(o=>`<button class="opt-btn" onclick="checkMath(${o},this)">${o}</button>`).join('')}
+    </div>
+  `);
+
+  mathTimerPct=100;
+  const tl=Math.max(3000,8000-(level-1)*500);
+  runCountdown(tl,()=>{
+    if(!gameActive) return;
+    mathLives--; onWrong();
+    if(mathLives<=0){showGameOver();return;}
+    _st(newMath,600);
+  });
+}
+
+function checkMath(val,btn){
+  stopAll();
+  document.querySelectorAll('.opt-btn').forEach(b=>b.disabled=true);
+  if(val===mathAns){
+    btn.classList.add('correct');
+    const pts=Math.round(10+mathTimerPct/10);
+    onCorrect(pts);
+    const ga=$id('gameArea');
+    if(ga) ga.insertAdjacentHTML('beforeend',`<div style="color:var(--accent);font-weight:600;margin-top:12px;text-align:center;">+${pts} pts!</div>`);
+  } else {
+    btn.classList.add('wrong'); mathLives--; onWrong();
+    document.querySelectorAll('.opt-btn').forEach(b=>{ if(+b.textContent===mathAns) b.classList.add('correct'); });
+    if(mathLives<=0){_st(showGameOver,1000);return;}
+  }
+  setTimerBar(0);
+  _st(newMath,1000);
+}
+
+// track timer pct for math score
+const _origSI=setInterval;
+// override runCountdown to also update mathTimerPct
+(function(){
+  const _orig=runCountdown;
+  // we read from the timerFill width instead to avoid closure complexity
+})();
+
+// ============================================================
+// GAME 3 — WORD UNSCRAMBLE
+// ============================================================
+const WORDS=[
+  {word:'FOCUS',hint:'Concentration 🎯'},{word:'PEACE',hint:'Tranquility ☮️'},
+  {word:'BRAIN',hint:'Your computer 🧠'},{word:'SMART',hint:'Intelligence ✨'},
+  {word:'RELAX',hint:'Take it easy 🌿'},{word:'THINK',hint:'Cognition 💭'},
+  {word:'DREAM',hint:'Night visions 🌙'},{word:'GLOW',hint:'Radiate light ✨'},
+  {word:'SWIFT',hint:'Very fast ⚡'},{word:'BLEND',hint:'Mix together 🎨'},
+  {word:'CRISP',hint:'Sharp & clear 🍃'},{word:'BRAVE',hint:'Courageous 🦁'},
+  {word:'FLUID',hint:'Flows freely 💧'},{word:'SPARK',hint:'Ignition ⭐'},
+  {word:'MIRTH',hint:'Joyfulness 😄'},{word:'ZENITH',hint:'Highest point 🏔️'},
+  {word:'CLARITY',hint:'Crystal clear 🔮'},{word:'SERENE',hint:'Calm & peaceful 🕊️'},
+  {word:'PONDER',hint:'Deep thought 🤔'},{word:'VISION',hint:'See the future 👁️'},
+];
+let wTarget='', wTimerPct=100, wLives=3;
+
+function scramble(word){
+  let arr=word.split(''),s=0;
+  do{arr.sort(()=>Math.random()-0.5);s++;}while(arr.join('')===word&&s<30);
+  return arr.join('');
+}
+
+function startWord(){ wLives=3; newWord(); }
+
+function newWord(){
+  if(!gameActive) return;
+  stopAll();
+  const pool=WORDS.filter(w=>w.word.length<=Math.min(4+level,7));
+  const ch=pool[rand(0,pool.length-1)];
+  wTarget=ch.word;
+  const sc=scramble(wTarget);
+
+  setHTML('gameArea',`
+    <div class="level-pill">Level ${level} · ❤️ ${wLives}</div>
+    <div class="scrambled-word" id="scramDisplay">${sc.split('').join(' ')}</div>
+    <div class="word-hint">${ch.hint}</div>
+    <input class="word-input" id="wordInput" maxlength="${wTarget.length}"
+      placeholder="${'_ '.repeat(wTarget.length).trim()}"
+      autocomplete="off" spellcheck="false">
+    <div style="color:var(--muted);font-size:0.75rem;margin-top:12px;text-align:center;">Type the word · Enter to submit</div>
+  `);
+
+  const inp=$id('wordInput');
+  if(inp){
+    inp.addEventListener('input',()=>checkWord(inp));
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') submitWord(); });
+    _st(()=>{ const i=$id('wordInput'); if(i) i.focus(); },60);
+  }
+
+  wTimerPct=100;
+  const tl=Math.max(5000,12000-level*400);
+  runCountdown(tl,()=>{
+    if(!gameActive) return;
+    wLives--; onWrong();
+    const sd=$id('scramDisplay');
+    if(sd){sd.textContent=wTarget;sd.style.color='var(--accent3)';}
+    if(wLives<=0){_st(showGameOver,1400);return;}
+    _st(newWord,1500);
+  });
+}
+
+function checkWord(inp){
+  if(!inp) return;
+  if(inp.value.toUpperCase()===wTarget){
+    stopAll(); inp.classList.add('correct-input'); inp.disabled=true;
+    const pts=Math.round(15+(wTimerPct||50)/5);
+    onCorrect(pts);
+    const sd=$id('scramDisplay');
+    if(sd){sd.textContent=wTarget;sd.style.color='var(--accent)';}
+    _st(()=>{ if(gameActive) newWord(); },900);
+  }
+}
+
+function submitWord(){
+  const inp=$id('wordInput'); if(!inp) return;
+  const val=inp.value.toUpperCase();
+  if(val.length>0 && val!==wTarget){
+    inp.classList.add('wrong-input'); wLives--; onWrong();
+    if(wLives<=0){stopAll();_st(showGameOver,800);return;}
+    _st(()=>{ const i=$id('wordInput'); if(i){i.classList.remove('wrong-input');i.value='';i.focus();}
+      const sd=$id('scramDisplay'); if(sd) sd.style.color='var(--accent2)'; },500);
+  }
+}
+
+// ============================================================
+// GAME 4 — COLOR MIND (Stroop test)
+// ============================================================
+const COLORS=[
+  {name:'RED',hex:'#f87171'},{name:'BLUE',hex:'#60a5fa'},
+  {name:'GREEN',hex:'#4ade80'},{name:'GOLD',hex:'#fbbf24'},
+  {name:'PINK',hex:'#f472b6'},{name:'CYAN',hex:'#22d3ee'},
+];
+let cAnswer='', cTimerPct=100, cLives=3;
+
+function startColor(){ cLives=3; newColor(); }
+
+function newColor(){
+  if(!gameActive) return;
+  stopAll();
+  const wordE=COLORS[rand(0,COLORS.length-1)];
+  let colorE=COLORS[rand(0,COLORS.length-1)];
+  // ensure mismatch at level 3+
+  if(level>=3){ let s=0; while(colorE===wordE&&s++<20) colorE=COLORS[rand(0,COLORS.length-1)]; }
+  cAnswer=colorE.name;
+
+  const opts=new Set([colorE]); let s=0;
+  while(opts.size<4&&s++<100) opts.add(COLORS[rand(0,COLORS.length-1)]);
+  const shuf=[...opts].sort(()=>Math.random()-0.5);
+
+  setHTML('gameArea',`
+    <div class="level-pill">Level ${level} · ❤️ ${cLives}</div>
+    <div class="color-word" style="color:${colorE.hex}">${wordE.name}</div>
+    <div class="color-instruction">Tap the COLOR of the ink — not the word!</div>
+    <div class="color-options">
+      ${shuf.map(c=>`<button class="color-opt" style="background:${c.hex};color:#000" onclick="checkColor('${c.name}',this)">${c.name}</button>`).join('')}
+    </div>
+  `);
+
+  cTimerPct=100;
+  const tl=Math.max(2000,6000-level*300);
+  runCountdown(tl,()=>{
+    if(!gameActive) return;
+    cLives--; onWrong();
+    if(cLives<=0){showGameOver();return;}
+    _st(newColor,500);
+  });
+}
+
+function checkColor(name,btn){
+  stopAll();
+  document.querySelectorAll('.color-opt').forEach(b=>b.style.pointerEvents='none');
+  if(name===cAnswer){
+    btn.style.outline='3px solid white';
+    const pts=Math.round(10+cTimerPct/8);
+    onCorrect(pts);
+    setTimerBar(0);
+    _st(()=>{ if(gameActive) newColor(); },600);
+  } else {
+    btn.style.outline='3px solid #f87171'; cLives--; onWrong();
+    document.querySelectorAll('.color-opt').forEach(b=>{ if(b.textContent.trim()===cAnswer) b.style.outline='3px solid white'; });
+    if(cLives<=0){setTimerBar(0);_st(showGameOver,900);return;}
+    setTimerBar(0);
+    _st(()=>{ if(gameActive) newColor(); },900);
+  }
+}
+
+// ============================================================
+// UTIL
+// ============================================================
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load',()=>{
+  setText('instructions', GAME_INFO[currentGame]);
+  // Starfield
+  try{
+    const c=document.createElement('canvas');
+    c.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.35';
+    document.body.prepend(c);
+    const ctx=c.getContext('2d');
+    c.width=window.innerWidth; c.height=window.innerHeight;
+    for(let i=0;i<130;i++){
+      ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.55+0.1})`;
+      ctx.beginPath(); ctx.arc(Math.random()*c.width,Math.random()*c.height,Math.random()*1.5,0,Math.PI*2); ctx.fill();
+    }
+  }catch(e){}
+});
+</script>
+</body>
+</html>
